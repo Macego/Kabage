@@ -1,4 +1,4 @@
-import niveau1 from "/src/js/niveau1.js";
+import niveau1 from "./js/niveau1.js";
 
 var config = {
   type: Phaser.AUTO,

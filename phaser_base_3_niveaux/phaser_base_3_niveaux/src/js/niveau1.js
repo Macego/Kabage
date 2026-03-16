@@ -1,4 +1,4 @@
-import * as fct from "/src/js/fonctions.js";
+import * as fct from "./fonctions.js";
 
 export default class niveau1 extends Phaser.Scene {
   constructor() {
@@ -81,15 +81,11 @@ export default class niveau1 extends Phaser.Scene {
       carteDuNiveau.heightInPixels
     );
 
-    this.cameras.main.setBounds(
-      0,
-      0,
-      carteDuNiveau.widthInPixels,
-      carteDuNiveau.heightInPixels
-    );
+  this.physics.world.setBounds(0, 0, 3800, 500);
+this.cameras.main.setBounds(0, 0, 3800, 500);
 
     this.cameras.main.startFollow(this.player);
-
+this.cameras.main.setBackgroundColor("#87CEEB");
     const calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
 
     this.anims.create({
