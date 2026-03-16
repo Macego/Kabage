@@ -67,7 +67,7 @@ export default class niveau1 extends Phaser.Scene {
     const calque_background = carteDuNiveau.createLayer("background", tousLesTilesets, 0, 0);
     const calque_plateforme = carteDuNiveau.createLayer("plateforme", tousLesTilesets, 0, 0);
 
-    this.player = this.physics.add.sprite(100, 100, "img_perso");
+    this.player = this.physics.add.sprite(25, 25, "img_perso");
     this.player.setBounce(0.1);
     this.player.setCollideWorldBounds(true);
 
