@@ -168,14 +168,15 @@ export default class niveau1 extends Phaser.Scene {
     coffreZone.body.setAllowGravity(false);
     coffreZone.body.moves = false;
 
-    texteInteraction = this.add.text(12, 40, "", {
-      fontSize: "14px",
-      color: "#ffffff",
-      backgroundColor: "#000000",
-      padding: { x: 6, y: 4 }
-    });
-    texteInteraction.setScrollFactor(0);
-    texteInteraction.setDepth(1000);
+texteInteraction = this.add.text(12, 40, "", {
+  fontSize: "14px",
+  color: "#ffffff",
+  backgroundColor: "#000000",
+  padding: { x: 6, y: 4 }
+});
+texteInteraction.setScrollFactor(0);
+texteInteraction.setDepth(1000);
+texteInteraction.setVisible(false);
 
     texteEtoiles = this.add.text(12, 12, "Nombre d'étoiles récupérées : 0", {
       fontSize: "16px",
@@ -373,13 +374,15 @@ export default class niveau1 extends Phaser.Scene {
     const procheLevier = this.physics.overlap(this.player, levierZone);
     const procheCoffre = this.physics.overlap(this.player, coffreZone);
 
-    if (procheLevier && !levierActive) {
-      texteInteraction.setText("Appuie sur E pour actionner le levier");
-    } else if (procheCoffre && levierActive && !coffreOuvert) {
-      texteInteraction.setText("Appuie sur E pour ouvrir le coffre");
-    } else {
-      texteInteraction.setText("");
-    }
+if (procheLevier && !levierActive) {
+  texteInteraction.setText("Appuie sur E pour actionner le levier");
+  texteInteraction.setVisible(true);
+} else if (procheCoffre && levierActive && !coffreOuvert) {
+  texteInteraction.setText("Appuie sur E pour ouvrir le coffre");
+  texteInteraction.setVisible(true);
+} else {
+  texteInteraction.setVisible(false);
+}
 
     if (procheLevier && Phaser.Input.Keyboard.JustDown(keyE) && !levierActive) {
       activerLevier();
@@ -454,7 +457,7 @@ export default class niveau1 extends Phaser.Scene {
 
 function activerLevier() {
   levierActive = true;
-  texteInteraction.setText("");
+  texteInteraction.setVisible(false);
 
   if (murBloquant) {
     murBloquant.setVisible(false);
