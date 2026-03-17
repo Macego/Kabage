@@ -879,6 +879,7 @@
   </tile>
   <tile id="95">
    <properties>
+    <property name="estMortel" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>
@@ -1503,6 +1504,9 @@
   </tile>
  </tileset>
  <tileset firstgid="2318" name="tilesheet_snow" tilewidth="16" tileheight="16" tilecount="224" columns="16">
+  <properties>
+   <property name="estMortel" type="bool" value="false"/>
+  </properties>
   <image source="../../../../../../../Downloads/maytch-16x16-tilesets/Maytch 16x16 Tilesets/tilesheet_snow.png" width="256" height="224"/>
   <tile id="0">
    <properties>
@@ -1886,6 +1890,7 @@
   </tile>
   <tile id="95">
    <properties>
+    <property name="estMortel" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>

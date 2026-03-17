@@ -11,16 +11,13 @@ export default class niveau1 extends Phaser.Scene {
     fct.doNothing();
     fct.doAlsoNothing();
 
-    // assets du perso
     this.load.spritesheet("img_perso", "src/assets/dude.png", {
       frameWidth: 32,
       frameHeight: 48
     });
 
-    // map
     this.load.tilemapTiledJSON("mapkabage", "src/assets/mapkabage.json");
 
-    // tilesets
     this.load.image("ts_layer_back", "src/assets/layer.back.png");
     this.load.image("ts_layer_back01", "src/assets/layer.back01.png");
     this.load.image("ts_ground_tiles", "src/assets/Ground Tiles.png");
@@ -35,6 +32,8 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   create() {
+    this.gameOver = false;
+
     const carteDuNiveau = this.make.tilemap({ key: "mapkabage" });
 
     const tileset_layer_back = carteDuNiveau.addTilesetImage("layer.back", "ts_layer_back");
@@ -66,27 +65,25 @@ export default class niveau1 extends Phaser.Scene {
     const calque_ciel = carteDuNiveau.createLayer("ciel", tousLesTilesets, 0, 0);
     const calque_background = carteDuNiveau.createLayer("background", tousLesTilesets, 0, 0);
     const calque_plateforme = carteDuNiveau.createLayer("plateforme", tousLesTilesets, 0, 0);
+    const calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
 
     this.player = this.physics.add.sprite(25, 25, "img_perso");
     this.player.setBounce(0.1);
     this.player.setCollideWorldBounds(false);
 
     calque_plateforme.setCollisionByProperty({ estSolide: true });
-    this.physics.add.collider(this.player, calque_plateforme);
 
-    this.physics.world.setBounds(
-      0,
-      0,
-      carteDuNiveau.widthInPixels,
-      carteDuNiveau.heightInPixels
-    );
+    this.physics.add.collider(this.player, calque_plateforme, (player, tile) => {
+      if (tile && tile.properties && tile.properties.estMortel) {
+        this.mourir("branche");
+      }
+    });
 
-  this.physics.world.setBounds(0, 0, 3800, 500);
-this.cameras.main.setBounds(0, 0, 3800, 500);
+    this.physics.world.setBounds(0, 0, 3800, 500);
+    this.cameras.main.setBounds(0, 0, 3800, 500);
 
     this.cameras.main.startFollow(this.player);
-this.cameras.main.setBackgroundColor("#87CEEB");
-    const calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
+    this.cameras.main.setBackgroundColor("#87CEEB");
 
     this.anims.create({
       key: "anim_tourne_gauche",
@@ -118,6 +115,10 @@ this.cameras.main.setBackgroundColor("#87CEEB");
   }
 
   update() {
+    if (this.gameOver) {
+      return;
+    }
+
     if (this.clavier.left.isDown) {
       this.player.setVelocityX(-160);
       this.player.anims.play("anim_tourne_gauche", true);
@@ -132,5 +133,43 @@ this.cameras.main.setBackgroundColor("#87CEEB");
     if (this.clavier.up.isDown && this.player.body.blocked.down) {
       this.player.setVelocityY(-250);
     }
+
+    if (this.player.y > 600) {
+      this.mourir("chute");
+    }
+  }
+
+  mourir(typeMort) {
+    if (this.gameOver) return;
+
+    this.gameOver = true;
+    this.physics.pause();
+    this.player.setTint(0xff0000);
+
+    let message = "GAME OVER - Appuie sur ENTRÉE pour recommencer";
+
+    if (typeMort === "branche") {
+      message += "\nNe touche pas les branches !";
+    }
+
+    this.texteGameOver = this.add.text(
+      400,
+      20,
+      message,
+      {
+        fontSize: "28px",
+        fill: "#ff0000",
+        backgroundColor: "#000000",
+        align: "center"
+      }
+    );
+
+    this.texteGameOver.setOrigin(0.5, 0);
+    this.texteGameOver.setScrollFactor(0);
+    this.texteGameOver.setDepth(1001);
+
+    this.input.keyboard.once("keydown-ENTER", () => {
+      this.scene.restart();
+    });
   }
 }

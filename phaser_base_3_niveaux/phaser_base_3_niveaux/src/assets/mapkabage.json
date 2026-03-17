@@ -1907,6 +1907,11 @@
                  "id":95,
                  "properties":[
                         {
+                         "name":"estMortel",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
                          "name":"estSolide",
                          "type":"bool",
                          "value":true
@@ -3060,6 +3065,12 @@
          "imagewidth":256,
          "margin":0,
          "name":"tilesheet_snow",
+         "properties":[
+                {
+                 "name":"estMortel",
+                 "type":"bool",
+                 "value":false
+                }],
          "spacing":0,
          "tilecount":224,
          "tileheight":16,
@@ -3751,6 +3762,11 @@
                 {
                  "id":95,
                  "properties":[
+                        {
+                         "name":"estMortel",
+                         "type":"bool",
+                         "value":true
+                        }, 
                         {
                          "name":"estSolide",
                          "type":"bool",
