@@ -1,5 +1,18 @@
 import * as fct from "./fonctions.js";
 
+let keyE;
+
+let levierZone;
+let coffreZone;
+let murBloquant;
+
+let texteInteraction;
+let texteEtoiles;
+
+let levierActive = false;
+let coffreOuvert = false;
+let nbEtoiles = 0;
+
 export default class niveau1 extends Phaser.Scene {
   constructor() {
     super({
@@ -29,11 +42,17 @@ export default class niveau1 extends Phaser.Scene {
     this.load.image("ts_tilesheet_ice", "src/assets/tilesheet_ice.png");
     this.load.image("ts_tilesheet_pagoda", "src/assets/tilesheet_pagoda.png");
     this.load.image("ts_tilesheet_snow", "src/assets/tilesheet_snow.png");
+
+    this.load.image("star", "src/assets/star.png");
   }
 
   create() {
     this.gameOver = false;
     this.estEnTrainDeGrimper = false;
+
+    levierActive = false;
+    coffreOuvert = false;
+    nbEtoiles = 0;
 
     this.vitesseMarche = 160;
     this.vitesseSaut = 250;
@@ -45,7 +64,7 @@ export default class niveau1 extends Phaser.Scene {
     this.accelerationGlace = 3;
     this.vitesseHorizontale = 0;
 
-    this.cameras.main.setZoom(1.5);
+    this.cameras.main.setZoom(1);
 
     const carteDuNiveau = this.make.tilemap({ key: "mapkabage" });
 
@@ -78,6 +97,7 @@ export default class niveau1 extends Phaser.Scene {
     carteDuNiveau.createLayer("ciel", tousLesTilesets, 0, 0);
     carteDuNiveau.createLayer("background", tousLesTilesets, 0, 0);
     this.calque_plateforme = carteDuNiveau.createLayer("plateforme", tousLesTilesets, 0, 0);
+    this.calque_mur_coffre = carteDuNiveau.createLayer("mur_coffre", tousLesTilesets, 0, 0);
     this.calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
 
     this.player = this.physics.add.sprite(25, 25, "img_perso");
@@ -89,11 +109,20 @@ export default class niveau1 extends Phaser.Scene {
 
     this.calque_plateforme.setCollisionByProperty({ estSolide: true });
 
+    if (this.calque_mur_coffre) {
+      this.calque_mur_coffre.setCollisionByProperty({ estSolide: true });
+      murBloquant = this.calque_mur_coffre;
+    }
+
     this.physics.add.collider(this.player, this.calque_plateforme, (player, tile) => {
       if (tile && tile.properties && tile.properties.estMortel) {
         this.mourir("branche");
       }
     });
+
+    if (this.calque_mur_coffre) {
+      this.physics.add.collider(this.player, this.calque_mur_coffre);
+    }
 
     this.physics.world.setBounds(0, 0, 3800, 500);
     this.cameras.main.setBounds(0, 0, 3800, 500);
@@ -127,6 +156,35 @@ export default class niveau1 extends Phaser.Scene {
     });
 
     this.clavier = this.input.keyboard.createCursorKeys();
+    keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    levierZone = this.add.zone(3475, 452, 50, 50);
+    this.physics.world.enable(levierZone);
+    levierZone.body.setAllowGravity(false);
+    levierZone.body.moves = false;
+
+    coffreZone = this.add.zone(3547, 475, 60, 60);
+    this.physics.world.enable(coffreZone);
+    coffreZone.body.setAllowGravity(false);
+    coffreZone.body.moves = false;
+
+    texteInteraction = this.add.text(12, 40, "", {
+      fontSize: "14px",
+      color: "#ffffff",
+      backgroundColor: "#000000",
+      padding: { x: 6, y: 4 }
+    });
+    texteInteraction.setScrollFactor(0);
+    texteInteraction.setDepth(1000);
+
+    texteEtoiles = this.add.text(12, 12, "Nombre d'étoiles récupérées : 0", {
+      fontSize: "16px",
+      color: "#ffffff",
+      backgroundColor: "#000000",
+      padding: { x: 6, y: 4 }
+    });
+    texteEtoiles.setScrollFactor(0);
+    texteEtoiles.setDepth(1000);
   }
 
   estTuileEchelle(tile) {
@@ -311,6 +369,25 @@ export default class niveau1 extends Phaser.Scene {
     if (this.player.y > 600) {
       this.mourir("chute");
     }
+
+    const procheLevier = this.physics.overlap(this.player, levierZone);
+    const procheCoffre = this.physics.overlap(this.player, coffreZone);
+
+    if (procheLevier && !levierActive) {
+      texteInteraction.setText("Appuie sur E pour actionner le levier");
+    } else if (procheCoffre && levierActive && !coffreOuvert) {
+      texteInteraction.setText("Appuie sur E pour ouvrir le coffre");
+    } else {
+      texteInteraction.setText("");
+    }
+
+    if (procheLevier && Phaser.Input.Keyboard.JustDown(keyE) && !levierActive) {
+      activerLevier();
+    }
+
+    if (procheCoffre && levierActive && Phaser.Input.Keyboard.JustDown(keyE) && !coffreOuvert) {
+      ouvrirCoffreEtDonnerEtoile.call(this);
+    }
   }
 
   mourir(typeMort) {
@@ -373,4 +450,40 @@ export default class niveau1 extends Phaser.Scene {
       this.scene.restart();
     });
   }
+}
+
+function activerLevier() {
+  levierActive = true;
+  texteInteraction.setText("");
+
+  if (murBloquant) {
+    murBloquant.setVisible(false);
+
+    murBloquant.forEachTile((tile) => {
+      if (tile) {
+        tile.setCollision(false, false, false, false);
+      }
+    });
+  }
+}
+
+function ouvrirCoffreEtDonnerEtoile() {
+  coffreOuvert = true;
+
+  const star = this.add.image(this.player.x, this.player.y - 20, "star");
+  star.setScale(0.8);
+  star.setDepth(1001);
+
+  nbEtoiles += 1;
+  texteEtoiles.setText("Nombre d'étoiles récupérées : " + nbEtoiles);
+
+  this.tweens.add({
+    targets: star,
+    y: this.player.y - 60,
+    alpha: 0,
+    duration: 800,
+    onComplete: () => {
+      star.destroy();
+    }
+  });
 }
