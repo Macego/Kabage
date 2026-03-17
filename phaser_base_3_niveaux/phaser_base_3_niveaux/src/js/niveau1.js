@@ -69,7 +69,7 @@ export default class niveau1 extends Phaser.Scene {
 
     this.player = this.physics.add.sprite(25, 25, "img_perso");
     this.player.setBounce(0.1);
-    this.player.setCollideWorldBounds(true);
+    this.player.setCollideWorldBounds(false);
 
     calque_plateforme.setCollisionByProperty({ estSolide: true });
     this.physics.add.collider(this.player, calque_plateforme);
