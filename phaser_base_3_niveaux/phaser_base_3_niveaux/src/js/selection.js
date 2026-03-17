@@ -7,6 +7,7 @@ import * as fct from "/src/js/fonctions.js";
 var player; // désigne le sprite du joueur
 var clavier; // pour la gestion du clavier
 var groupe_plateformes;
+var sautsRestants = 2;
 
 // définition de la classe "selection"
 export default class selection extends Phaser.Scene {
@@ -132,7 +133,13 @@ export default class selection extends Phaser.Scene {
      *  CREATION DU CLAVIER *
      ************************/
     // ceci permet de creer un clavier et de mapper des touches, connaitre l'état des touches
-    clavier = this.input.keyboard.createCursorKeys();
+    clavier = this.input.keyboard.addKeys({
+      z: Phaser.Input.Keyboard.KeyCodes.Z,
+      q: Phaser.Input.Keyboard.KeyCodes.Q,
+      s: Phaser.Input.Keyboard.KeyCodes.S,
+      d: Phaser.Input.Keyboard.KeyCodes.D,
+      space: Phaser.Input.Keyboard.KeyCodes.SPACE
+    });
 
     /*****************************************************
      *  GESTION DES INTERATIONS ENTRE  GROUPES ET ELEMENTS *
@@ -145,35 +152,28 @@ export default class selection extends Phaser.Scene {
   /***********************************************************************/
   /** FONCTION UPDATE 
 /***********************************************************************/
-
-  update() {
-    
-    if (clavier.left.isDown) {
-      player.setVelocityX(-160);
-      player.anims.play("anim_tourne_gauche", true);
-    } else if (clavier.right.isDown) {
-      player.setVelocityX(160);
-      player.anims.play("anim_tourne_droite", true);
-    } else {
-      player.setVelocityX(0);
-      player.anims.play("anim_face");
-    }
-
-    if (clavier.up.isDown && player.body.touching.down) {
-      player.setVelocityY(-330);
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(clavier.space) == true) {
-      if (this.physics.overlap(player, this.porte1))
-        this.scene.switch("niveau1");
-      if (this.physics.overlap(player, this.porte2))
-        this.scene.switch("niveau2");
-      if (this.physics.overlap(player, this.porte3))
-        this.scene.switch("niveau3");
-    }
+update() {
+  if (clavier.left.isDown) {
+    player.setVelocityX(-160);
+    player.anims.play("anim_tourne_gauche", true);
+  }
+  else if (clavier.right.isDown) {
+    player.setVelocityX(160);
+    player.anims.play("anim_tourne_droite", true);
+  }
+  else {
+    player.setVelocityX(0);
+    player.anims.play("anim_face");
+  }
+  if (clavier.up.isDown && player.body.touching.down) {
+    player.setVelocityY(-330);
+  }
+  if (Phaser.Input.Keyboard.JustDown(clavier.space) == true) {
+    if (this.physics.overlap(player, this.porte1)) this.scene.switch("niveau1");
+    if (this.physics.overlap(player, this.porte2)) this.scene.switch("niveau2");
+    if (this.physics.overlap(player, this.porte3)) this.scene.switch("niveau3");
   }
 }
-
 /***********************************************************************/
 /** CONFIGURATION GLOBALE DU JEU ET LANCEMENT 
 /***********************************************************************/
