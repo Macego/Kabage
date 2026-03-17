@@ -33,7 +33,7 @@ export default class niveau1 extends Phaser.Scene {
 
   create() {
     this.gameOver = false;
-  
+    this.cameras.main.setZoom(1.5);
 
     const carteDuNiveau = this.make.tilemap({ key: "mapkabage" });
 
@@ -63,10 +63,10 @@ export default class niveau1 extends Phaser.Scene {
       tileset_tilesheet_snow
     ].filter(ts => ts !== null);
 
-    const calque_ciel = carteDuNiveau.createLayer("ciel", tousLesTilesets, 0, 0);
-    const calque_background = carteDuNiveau.createLayer("background", tousLesTilesets, 0, 0);
+    carteDuNiveau.createLayer("ciel", tousLesTilesets, 0, 0);
+    carteDuNiveau.createLayer("background", tousLesTilesets, 0, 0);
     const calque_plateforme = carteDuNiveau.createLayer("plateforme", tousLesTilesets, 0, 0);
-    const calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
+    carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
 
     this.player = this.physics.add.sprite(25, 25, "img_perso");
     this.player.setScale(0.5);
@@ -84,7 +84,6 @@ export default class niveau1 extends Phaser.Scene {
 
     this.physics.world.setBounds(0, 0, 3800, 500);
     this.cameras.main.setBounds(0, 0, 3800, 500);
-
     this.cameras.main.startFollow(this.player);
     this.cameras.main.setBackgroundColor("#87CEEB");
 
@@ -146,30 +145,56 @@ export default class niveau1 extends Phaser.Scene {
     if (this.gameOver) return;
 
     this.gameOver = true;
+    this.cameras.main.stopFollow();
     this.physics.pause();
     this.player.setTint(0xff0000);
 
-    let message = "GAME OVER - Appuie sur ENTRÉE pour recommencer";
+    let ligne1 = "GAME OVER";
+    let ligne2 = "Appuie sur ENTREE pour recommencer";
 
     if (typeMort === "branche") {
-      message += "\nNe touche pas les branches !";
+      ligne2 = "Ne touche pas les branches !";
     }
 
-    this.texteGameOver = this.add.text(
-      400,
-      20,
-      message,
+    this.fondGameOver = this.add.rectangle(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2,
+      700,
+      140,
+      0x000000,
+      0.85
+    );
+    this.fondGameOver.setScrollFactor(0);
+    this.fondGameOver.setDepth(9998);
+
+    this.texteGameOver1 = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 - 25,
+      ligne1,
       {
-        fontSize: "28px",
-        fill: "#ff0000",
-        backgroundColor: "#000000",
+        fontSize: "40px",
+        color: "#ff0000",
         align: "center"
       }
     );
+    this.texteGameOver1.setOrigin(0.5, 0.5);
+    this.texteGameOver1.setScrollFactor(0);
+    this.texteGameOver1.setDepth(9999);
 
-    this.texteGameOver.setOrigin(0.5, 0);
-    this.texteGameOver.setScrollFactor(0);
-    this.texteGameOver.setDepth(1001);
+    this.texteGameOver2 = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 + 25,
+      ligne2,
+      {
+        fontSize: "24px",
+        color: "#ff0000",
+        align: "center",
+        wordWrap: { width: 640 }
+      }
+    );
+    this.texteGameOver2.setOrigin(0.5, 0.5);
+    this.texteGameOver2.setScrollFactor(0);
+    this.texteGameOver2.setDepth(9999);
 
     this.input.keyboard.once("keydown-ENTER", () => {
       this.scene.restart();
