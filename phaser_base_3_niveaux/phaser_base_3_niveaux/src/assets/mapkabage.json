@@ -6795,6 +6795,11 @@
                  "id":160,
                  "properties":[
                         {
+                         "name":"estFragile",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
                          "name":"estSolide",
                          "type":"bool",
                          "value":true
@@ -6803,6 +6808,11 @@
                 {
                  "id":161,
                  "properties":[
+                        {
+                         "name":"estFragile",
+                         "type":"bool",
+                         "value":true
+                        }, 
                         {
                          "name":"estSolide",
                          "type":"bool",
@@ -6813,6 +6823,11 @@
                  "id":162,
                  "properties":[
                         {
+                         "name":"estFragile",
+                         "type":"bool",
+                         "value":true
+                        }, 
+                        {
                          "name":"estSolide",
                          "type":"bool",
                          "value":true
@@ -6821,6 +6836,11 @@
                 {
                  "id":163,
                  "properties":[
+                        {
+                         "name":"estFragile",
+                         "type":"bool",
+                         "value":true
+                        }, 
                         {
                          "name":"estSolide",
                          "type":"bool",

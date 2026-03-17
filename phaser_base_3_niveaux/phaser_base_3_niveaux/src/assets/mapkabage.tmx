@@ -3275,21 +3275,25 @@
   </tile>
   <tile id="160">
    <properties>
+    <property name="estFragile" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>
   <tile id="161">
    <properties>
+    <property name="estFragile" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>
   <tile id="162">
    <properties>
+    <property name="estFragile" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>
   <tile id="163">
    <properties>
+    <property name="estFragile" type="bool" value="true"/>
     <property name="estSolide" type="bool" value="true"/>
    </properties>
   </tile>

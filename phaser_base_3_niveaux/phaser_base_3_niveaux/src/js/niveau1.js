@@ -18,6 +18,19 @@ export default class niveau1 extends Phaser.Scene {
     super({
       key: "niveau1"
     });
+
+    this.timerChrono = null;
+    this.timerVent = null;
+    this.timerFinVent = null;
+
+    this.tempsEcoule = 0;
+    this.texteChrono = null;
+    this.texteVent = null;
+
+    this.ventActif = false;
+    this.forceVent = 0;
+
+    this.tuilesFragilesDeclenchees = [];
   }
 
   preload() {
@@ -63,6 +76,12 @@ export default class niveau1 extends Phaser.Scene {
     this.accelerationSol = 12;
     this.accelerationGlace = 3;
     this.vitesseHorizontale = 0;
+
+    this.ventActif = false;
+    this.forceVent = 0;
+
+    this.tempsEcoule = 0;
+    this.tuilesFragilesDeclenchees = [];
 
     this.cameras.main.setZoom(1);
 
@@ -168,15 +187,15 @@ export default class niveau1 extends Phaser.Scene {
     coffreZone.body.setAllowGravity(false);
     coffreZone.body.moves = false;
 
-texteInteraction = this.add.text(12, 40, "", {
-  fontSize: "14px",
-  color: "#ffffff",
-  backgroundColor: "#000000",
-  padding: { x: 6, y: 4 }
-});
-texteInteraction.setScrollFactor(0);
-texteInteraction.setDepth(1000);
-texteInteraction.setVisible(false);
+    texteInteraction = this.add.text(12, 44, "", {
+      fontSize: "14px",
+      color: "#ffffff",
+      backgroundColor: "#000000",
+      padding: { x: 6, y: 4 }
+    });
+    texteInteraction.setScrollFactor(0);
+    texteInteraction.setDepth(1000);
+    texteInteraction.setVisible(false);
 
     texteEtoiles = this.add.text(12, 12, "Nombre d'étoiles récupérées : 0", {
       fontSize: "16px",
@@ -186,6 +205,93 @@ texteInteraction.setVisible(false);
     });
     texteEtoiles.setScrollFactor(0);
     texteEtoiles.setDepth(1000);
+
+    this.texteChrono = this.add.text(12, 76, "Temps : 00:00", {
+      fontSize: "16px",
+      color: "#ffffff",
+      backgroundColor: "#000000",
+      padding: { x: 6, y: 4 }
+    });
+    this.texteChrono.setScrollFactor(0);
+    this.texteChrono.setDepth(1000);
+
+    this.texteVent = this.add.text(400, 40, "Attention : bourrasque de vent !", {
+      fontSize: "24px",
+      color: "#ffffff",
+      backgroundColor: "#b22222",
+      padding: { x: 10, y: 6 }
+    });
+    this.texteVent.setOrigin(0.5, 0);
+    this.texteVent.setScrollFactor(0);
+    this.texteVent.setDepth(1001);
+    this.texteVent.setVisible(false);
+
+    this.timerChrono = this.time.addEvent({
+      delay: 1000,
+      callback: this.mettreAJourChrono,
+      args: [],
+      callbackScope: this,
+      repeat: -1
+    });
+
+    this.timerVent = this.time.addEvent({
+      delay: 10000,
+      callback: this.declencherBourrasque,
+      args: [],
+      callbackScope: this,
+      repeat: -1
+    });
+  }
+
+  mettreAJourChrono() {
+    if (this.gameOver) {
+      return;
+    }
+
+    this.tempsEcoule += 1;
+
+    const minutes = Math.floor(this.tempsEcoule / 60);
+    const secondes = this.tempsEcoule % 60;
+
+    const mm = String(minutes).padStart(2, "0");
+    const ss = String(secondes).padStart(2, "0");
+
+    this.texteChrono.setText("Temps : " + mm + ":" + ss);
+  }
+
+  declencherBourrasque() {
+    if (this.gameOver) {
+      return;
+    }
+
+    this.texteVent.setVisible(true);
+
+    if (this.timerFinVent) {
+      this.timerFinVent.remove(false);
+    }
+
+    if (this.estEnTrainDeGrimper) {
+      this.forceVent = 0;
+      this.ventActif = false;
+
+      this.time.delayedCall(800, () => {
+        if (!this.gameOver) {
+          this.texteVent.setVisible(false);
+        }
+      }, null, this);
+
+      return;
+    }
+
+    this.forceVent = -140;
+    this.ventActif = true;
+    this.player.setVelocityY(-20);
+
+    this.timerFinVent = this.time.delayedCall(800, () => {
+      this.ventActif = false;
+      this.forceVent = 0;
+      this.texteVent.setVisible(false);
+    }, null, this);
   }
 
   estTuileEchelle(tile) {
@@ -228,6 +334,48 @@ texteInteraction.setVisible(false);
     return null;
   }
 
+  gererPlateformesFragiles() {
+    const points = [
+      { x: this.player.x, y: this.player.y + 18 },
+      { x: this.player.x - 6, y: this.player.y + 18 },
+      { x: this.player.x + 6, y: this.player.y + 18 }
+    ];
+
+    for (let i = 0; i < points.length; i++) {
+      const tileFragile = this.calque_plateforme.getTileAtWorldXY(points[i].x, points[i].y, false);
+
+      if (
+        tileFragile &&
+        tileFragile.properties &&
+        tileFragile.properties.estFragile === true
+      ) {
+        const idTuile = tileFragile.x + "_" + tileFragile.y;
+
+        if (!this.tuilesFragilesDeclenchees.includes(idTuile)) {
+          this.tuilesFragilesDeclenchees.push(idTuile);
+
+          this.tweens.add({
+            targets: tileFragile,
+            alpha: 0.6,
+            x: tileFragile.pixelX + 2,
+            duration: 60,
+            yoyo: true,
+            repeat: 5,
+            onComplete: () => {
+              this.time.delayedCall(150, () => {
+                tileFragile.setCollision(false, false, false, false);
+                tileFragile.visible = false;
+                tileFragile.alpha = 0;
+              }, null, this);
+            }
+          });
+        }
+
+        break;
+      }
+    }
+  }
+
   update() {
     if (this.gameOver) {
       return;
@@ -259,6 +407,7 @@ texteInteraction.setVisible(false);
       this.player.body.allowGravity = false;
       this.player.setVelocityX(0);
       this.vitesseHorizontale = 0;
+      this.forceVent = 0;
 
       if (this.clavier.up.isDown) {
         this.player.setVelocityY(-this.vitesseEchelle);
@@ -357,8 +506,6 @@ texteInteraction.setVisible(false);
       this.player.anims.play("anim_face", true);
     }
 
-    this.player.setVelocityX(this.vitesseHorizontale);
-
     if (this.clavier.up.isDown && this.player.body.blocked.down) {
       this.player.setVelocityY(-this.vitesseSaut);
     }
@@ -367,6 +514,16 @@ texteInteraction.setVisible(false);
       this.vitesseHorizontale = 0;
     }
 
+    let vitesseFinaleX = this.vitesseHorizontale;
+
+    if (this.ventActif) {
+      vitesseFinaleX += this.forceVent;
+    }
+
+    this.player.setVelocityX(vitesseFinaleX);
+
+    this.gererPlateformesFragiles();
+
     if (this.player.y > 600) {
       this.mourir("chute");
     }
@@ -374,15 +531,15 @@ texteInteraction.setVisible(false);
     const procheLevier = this.physics.overlap(this.player, levierZone);
     const procheCoffre = this.physics.overlap(this.player, coffreZone);
 
-if (procheLevier && !levierActive) {
-  texteInteraction.setText("Appuie sur E pour actionner le levier");
-  texteInteraction.setVisible(true);
-} else if (procheCoffre && levierActive && !coffreOuvert) {
-  texteInteraction.setText("Appuie sur E pour ouvrir le coffre");
-  texteInteraction.setVisible(true);
-} else {
-  texteInteraction.setVisible(false);
-}
+    if (procheLevier && !levierActive) {
+      texteInteraction.setText("Appuie sur E pour actionner le levier");
+      texteInteraction.setVisible(true);
+    } else if (procheCoffre && levierActive && !coffreOuvert) {
+      texteInteraction.setText("Appuie sur E pour ouvrir le coffre");
+      texteInteraction.setVisible(true);
+    } else {
+      texteInteraction.setVisible(false);
+    }
 
     if (procheLevier && Phaser.Input.Keyboard.JustDown(keyE) && !levierActive) {
       activerLevier();
@@ -398,6 +555,25 @@ if (procheLevier && !levierActive) {
 
     this.gameOver = true;
     this.estEnTrainDeGrimper = false;
+    this.ventActif = false;
+    this.forceVent = 0;
+
+    if (this.timerChrono) {
+      this.timerChrono.paused = true;
+    }
+
+    if (this.timerVent) {
+      this.timerVent.paused = true;
+    }
+
+    if (this.timerFinVent) {
+      this.timerFinVent.remove(false);
+    }
+
+    if (this.texteVent) {
+      this.texteVent.setVisible(false);
+    }
+
     this.cameras.main.stopFollow();
     this.physics.pause();
     this.player.setTint(0xff0000);
