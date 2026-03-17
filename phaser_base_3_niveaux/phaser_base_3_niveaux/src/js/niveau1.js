@@ -122,10 +122,10 @@ export default class niveau1 extends Phaser.Scene {
     }
 
     if (this.clavier.left.isDown) {
-      this.player.setVelocityX(-160);
+      this.player.setVelocityX(-150);
       this.player.anims.play("anim_tourne_gauche", true);
     } else if (this.clavier.right.isDown) {
-      this.player.setVelocityX(160);
+      this.player.setVelocityX(150);
       this.player.anims.play("anim_tourne_droite", true);
     } else {
       this.player.setVelocityX(0);
@@ -133,7 +133,7 @@ export default class niveau1 extends Phaser.Scene {
     }
 
     if (this.clavier.up.isDown && this.player.body.blocked.down) {
-      this.player.setVelocityY(-250);
+      this.player.setVelocityY(-225);
     }
 
     if (this.player.y > 600) {
