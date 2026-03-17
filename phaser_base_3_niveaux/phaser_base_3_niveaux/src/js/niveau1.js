@@ -31,6 +31,9 @@ export default class niveau1 extends Phaser.Scene {
     this.forceVent = 0;
 
     this.tuilesFragilesDeclenchees = [];
+
+    this.nbSautsMax = 2;
+    this.sautsRestants = 2;
   }
 
   preload() {
@@ -68,7 +71,7 @@ export default class niveau1 extends Phaser.Scene {
     nbEtoiles = 0;
 
     this.vitesseMarche = 160;
-    this.vitesseSaut = 250;
+    this.vitesseSaut = 225;
     this.vitesseEchelle = 120;
 
     this.vitesseMarcheNormale = 160;
@@ -82,6 +85,7 @@ export default class niveau1 extends Phaser.Scene {
 
     this.tempsEcoule = 0;
     this.tuilesFragilesDeclenchees = [];
+    this.sautsRestants = this.nbSautsMax;
 
     this.cameras.main.setZoom(1);
 
@@ -381,6 +385,13 @@ export default class niveau1 extends Phaser.Scene {
       return;
     }
 
+    const toucheSaut = Phaser.Input.Keyboard.JustDown(this.clavier.up) ||
+                      Phaser.Input.Keyboard.JustDown(this.clavier.space);
+
+    if (this.player.body.blocked.down) {
+      this.sautsRestants = this.nbSautsMax;
+    }
+
     const tileEchelle = this.recupererTuileEchelle();
     const surEchelle = tileEchelle !== null;
 
@@ -425,13 +436,11 @@ export default class niveau1 extends Phaser.Scene {
         this.player.anims.play("anim_face", true);
       }
 
-      if (
-        Phaser.Input.Keyboard.JustDown(this.clavier.space) ||
-        Phaser.Input.Keyboard.JustDown(this.clavier.up)
-      ) {
+      if (toucheSaut) {
         this.estEnTrainDeGrimper = false;
         this.player.body.allowGravity = true;
         this.player.setVelocityY(-this.vitesseSaut);
+        this.sautsRestants = 1;
         return;
       }
 
@@ -506,8 +515,14 @@ export default class niveau1 extends Phaser.Scene {
       this.player.anims.play("anim_face", true);
     }
 
-    if (this.clavier.up.isDown && this.player.body.blocked.down) {
-      this.player.setVelocityY(-this.vitesseSaut);
+    if (toucheSaut) {
+      if (this.player.body.blocked.down) {
+        this.player.setVelocityY(-this.vitesseSaut);
+        this.sautsRestants = 1;
+      } else if (this.sautsRestants > 0) {
+        this.player.setVelocityY(-this.vitesseSaut);
+        this.sautsRestants -= 1;
+      }
     }
 
     if (!surGlace && !this.clavier.left.isDown && !this.clavier.right.isDown) {
@@ -518,6 +533,10 @@ export default class niveau1 extends Phaser.Scene {
 
     if (this.ventActif) {
       vitesseFinaleX += this.forceVent;
+
+      if (vitesseFinaleX > 0) {
+        vitesseFinaleX = 0;
+      }
     }
 
     this.player.setVelocityX(vitesseFinaleX);
