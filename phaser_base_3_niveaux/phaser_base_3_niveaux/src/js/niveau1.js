@@ -33,6 +33,7 @@ export default class niveau1 extends Phaser.Scene {
 
   create() {
     this.gameOver = false;
+  
 
     const carteDuNiveau = this.make.tilemap({ key: "mapkabage" });
 
@@ -68,8 +69,10 @@ export default class niveau1 extends Phaser.Scene {
     const calque_deco = carteDuNiveau.createLayer("déco", tousLesTilesets, 0, 0);
 
     this.player = this.physics.add.sprite(25, 25, "img_perso");
+    this.player.setScale(0.5);
     this.player.setBounce(0.1);
     this.player.setCollideWorldBounds(false);
+    this.player.body.setSize(20, 30);
 
     calque_plateforme.setCollisionByProperty({ estSolide: true });
 
