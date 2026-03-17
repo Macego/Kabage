@@ -39,6 +39,12 @@ export default class niveau1 extends Phaser.Scene {
     this.vitesseSaut = 250;
     this.vitesseEchelle = 120;
 
+    this.vitesseMarcheNormale = 160;
+    this.vitesseMarcheGlace = 260;
+    this.accelerationSol = 12;
+    this.accelerationGlace = 3;
+    this.vitesseHorizontale = 0;
+
     this.cameras.main.setZoom(1.5);
 
     const carteDuNiveau = this.make.tilemap({ key: "mapkabage" });
@@ -145,110 +151,167 @@ export default class niveau1 extends Phaser.Scene {
     return null;
   }
 
+  recupererTuileGlace() {
+    const points = [
+      { x: this.player.x, y: this.player.y + 18 },
+      { x: this.player.x - 6, y: this.player.y + 18 },
+      { x: this.player.x + 6, y: this.player.y + 18 }
+    ];
+
+    for (let i = 0; i < points.length; i++) {
+      const tile = this.calque_plateforme.getTileAtWorldXY(points[i].x, points[i].y, false);
+
+      if (tile && tile.properties && tile.properties.estGlace === true) {
+        return tile;
+      }
+    }
+
+    return null;
+  }
+
   update() {
-  if (this.gameOver) {
-    return;
-  }
+    if (this.gameOver) {
+      return;
+    }
 
-  const tileEchelle = this.recupererTuileEchelle();
-  const surEchelle = tileEchelle !== null;
+    const tileEchelle = this.recupererTuileEchelle();
+    const surEchelle = tileEchelle !== null;
 
-  if (
-    surEchelle &&
-    !this.estEnTrainDeGrimper &&
-    (this.clavier.up.isDown || this.clavier.down.isDown)
-  ) {
-    this.estEnTrainDeGrimper = true;
-    this.player.body.allowGravity = false;
-    this.player.setVelocityX(0);
-    this.player.setVelocityY(0);
+    if (
+      surEchelle &&
+      !this.estEnTrainDeGrimper &&
+      (this.clavier.up.isDown || this.clavier.down.isDown)
+    ) {
+      this.estEnTrainDeGrimper = true;
+      this.player.body.allowGravity = false;
+      this.player.setVelocityX(0);
+      this.player.setVelocityY(0);
 
-    const centreTuileX = tileEchelle.getCenterX();
-    this.player.x = centreTuileX;
-  }
-
-  if (this.estEnTrainDeGrimper) {
-    if (surEchelle) {
       const centreTuileX = tileEchelle.getCenterX();
       this.player.x = centreTuileX;
     }
 
-    this.player.body.allowGravity = false;
-    this.player.setVelocityX(0);
+    if (this.estEnTrainDeGrimper) {
+      if (surEchelle) {
+        const centreTuileX = tileEchelle.getCenterX();
+        this.player.x = centreTuileX;
+      }
 
-    if (this.clavier.up.isDown) {
-      this.player.setVelocityY(-this.vitesseEchelle);
-    } else if (this.clavier.down.isDown) {
-      this.player.setVelocityY(this.vitesseEchelle);
-    } else {
-      this.player.setVelocityY(0);
+      this.player.body.allowGravity = false;
+      this.player.setVelocityX(0);
+      this.vitesseHorizontale = 0;
+
+      if (this.clavier.up.isDown) {
+        this.player.setVelocityY(-this.vitesseEchelle);
+      } else if (this.clavier.down.isDown) {
+        this.player.setVelocityY(this.vitesseEchelle);
+      } else {
+        this.player.setVelocityY(0);
+      }
+
+      if (this.clavier.left.isDown) {
+        this.player.anims.play("anim_tourne_gauche", true);
+      } else if (this.clavier.right.isDown) {
+        this.player.anims.play("anim_tourne_droite", true);
+      } else {
+        this.player.anims.play("anim_face", true);
+      }
+
+      if (
+        Phaser.Input.Keyboard.JustDown(this.clavier.space) ||
+        Phaser.Input.Keyboard.JustDown(this.clavier.up)
+      ) {
+        this.estEnTrainDeGrimper = false;
+        this.player.body.allowGravity = true;
+        this.player.setVelocityY(-this.vitesseSaut);
+        return;
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(this.clavier.left)) {
+        this.estEnTrainDeGrimper = false;
+        this.player.body.allowGravity = true;
+        this.player.setVelocityX(-this.vitesseMarche);
+        return;
+      }
+
+      if (Phaser.Input.Keyboard.JustDown(this.clavier.right)) {
+        this.estEnTrainDeGrimper = false;
+        this.player.body.allowGravity = true;
+        this.player.setVelocityX(this.vitesseMarche);
+        return;
+      }
+
+      if (!surEchelle) {
+        this.estEnTrainDeGrimper = false;
+        this.player.body.allowGravity = true;
+      }
+
+      if (this.player.y > 600) {
+        this.mourir("chute");
+      }
+
+      return;
+    }
+
+    this.player.body.allowGravity = true;
+
+    const tileGlace = this.recupererTuileGlace();
+    const surGlace = tileGlace !== null;
+
+    let vitesseMax = this.vitesseMarcheNormale;
+    let acceleration = this.accelerationSol;
+
+    if (surGlace) {
+      vitesseMax = this.vitesseMarcheGlace;
+      acceleration = this.accelerationGlace;
     }
 
     if (this.clavier.left.isDown) {
+      this.vitesseHorizontale -= acceleration;
+      if (this.vitesseHorizontale < -vitesseMax) {
+        this.vitesseHorizontale = -vitesseMax;
+      }
       this.player.anims.play("anim_tourne_gauche", true);
     } else if (this.clavier.right.isDown) {
+      this.vitesseHorizontale += acceleration;
+      if (this.vitesseHorizontale > vitesseMax) {
+        this.vitesseHorizontale = vitesseMax;
+      }
       this.player.anims.play("anim_tourne_droite", true);
     } else {
+      if (surGlace) {
+        if (this.vitesseHorizontale > 0) {
+          this.vitesseHorizontale -= 1;
+          if (this.vitesseHorizontale < 0) {
+            this.vitesseHorizontale = 0;
+          }
+        } else if (this.vitesseHorizontale < 0) {
+          this.vitesseHorizontale += 1;
+          if (this.vitesseHorizontale > 0) {
+            this.vitesseHorizontale = 0;
+          }
+        }
+      } else {
+        this.vitesseHorizontale = 0;
+      }
+
       this.player.anims.play("anim_face", true);
     }
 
-    // saut depuis l'échelle avec flèche haut ou espace
-    if (Phaser.Input.Keyboard.JustDown(this.clavier.space) || Phaser.Input.Keyboard.JustDown(this.clavier.up)) {
-      this.estEnTrainDeGrimper = false;
-      this.player.body.allowGravity = true;
+    this.player.setVelocityX(this.vitesseHorizontale);
+
+    if (this.clavier.up.isDown && this.player.body.blocked.down) {
       this.player.setVelocityY(-this.vitesseSaut);
-      return;
     }
 
-    // sortir de l'échelle en marchant à gauche/droite
-    if (Phaser.Input.Keyboard.JustDown(this.clavier.left)) {
-      this.estEnTrainDeGrimper = false;
-      this.player.body.allowGravity = true;
-      this.player.setVelocityX(-this.vitesseMarche);
-      return;
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(this.clavier.right)) {
-      this.estEnTrainDeGrimper = false;
-      this.player.body.allowGravity = true;
-      this.player.setVelocityX(this.vitesseMarche);
-      return;
-    }
-
-    // si on n'est plus sur l'échelle, on retombe
-    if (!surEchelle) {
-      this.estEnTrainDeGrimper = false;
-      this.player.body.allowGravity = true;
+    if (!surGlace && !this.clavier.left.isDown && !this.clavier.right.isDown) {
+      this.vitesseHorizontale = 0;
     }
 
     if (this.player.y > 600) {
       this.mourir("chute");
     }
-
-    return;
   }
-
-  this.player.body.allowGravity = true;
-
-  if (this.clavier.left.isDown) {
-    this.player.setVelocityX(-this.vitesseMarche);
-    this.player.anims.play("anim_tourne_gauche", true);
-  } else if (this.clavier.right.isDown) {
-    this.player.setVelocityX(this.vitesseMarche);
-    this.player.anims.play("anim_tourne_droite", true);
-  } else {
-    this.player.setVelocityX(0);
-    this.player.anims.play("anim_face", true);
-  }
-
-  if (this.clavier.up.isDown && this.player.body.blocked.down) {
-    this.player.setVelocityY(-this.vitesseSaut);
-  }
-
-  if (this.player.y > 600) {
-    this.mourir("chute");
-  }
-}
 
   mourir(typeMort) {
     if (this.gameOver) return;
