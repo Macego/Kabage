@@ -7,11 +7,9 @@ let coffreZone;
 let murBloquant;
 
 let texteInteraction;
-let texteEtoiles;
 
 let levierActive = false;
 let coffreOuvert = false;
-let nbEtoiles = 0;
 
 export default class niveau1 extends Phaser.Scene {
   constructor() {
@@ -37,6 +35,7 @@ export default class niveau1 extends Phaser.Scene {
     this.sautsRestants = 2;
 
     this.groupeFlammes = null;
+    this.niveauTermine = false;
   }
 
   preload() {
@@ -68,11 +67,11 @@ export default class niveau1 extends Phaser.Scene {
 
   create() {
     this.gameOver = false;
+    this.niveauTermine = false;
     this.estEnTrainDeGrimper = false;
 
     levierActive = false;
     coffreOuvert = false;
-    nbEtoiles = 0;
 
     this.vitesseMarche = 160;
     this.vitesseSaut = 225;
@@ -225,16 +224,7 @@ export default class niveau1 extends Phaser.Scene {
     texteInteraction.setDepth(1000);
     texteInteraction.setVisible(false);
 
-    texteEtoiles = this.add.text(12, 12, "Nombre d'étoiles récupérées : 0", {
-      fontSize: "16px",
-      color: "#ffffff",
-      backgroundColor: "#000000",
-      padding: { x: 6, y: 4 }
-    });
-    texteEtoiles.setScrollFactor(0);
-    texteEtoiles.setDepth(1000);
-
-    this.texteChrono = this.add.text(12, 76, "Temps : 00:00", {
+    this.texteChrono = this.add.text(12, 12, "Temps : 00:00", {
       fontSize: "16px",
       color: "#ffffff",
       backgroundColor: "#000000",
@@ -280,7 +270,7 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   mettreAJourChrono() {
-    if (this.gameOver) {
+    if (this.gameOver || this.niveauTermine) {
       return;
     }
 
@@ -296,7 +286,7 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   creerFlamme(xPosition) {
-    if (this.gameOver) {
+    if (this.gameOver || this.niveauTermine) {
       return;
     }
 
@@ -310,14 +300,22 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   creerVagueFlammes() {
-    if (this.gameOver) {
+    if (this.gameOver || this.niveauTermine) {
       return;
     }
 
     const nombreFlammes = Phaser.Math.Between(4, 7);
 
     for (let i = 0; i < nombreFlammes; i++) {
-      const xAleatoire = Phaser.Math.Between(50, 3750);
+      let xAleatoire = Phaser.Math.Between(this.player.x - 250, this.player.x + 250);
+
+      if (xAleatoire < 30) {
+        xAleatoire = 30;
+      }
+
+      if (xAleatoire > 3770) {
+        xAleatoire = 3770;
+      }
 
       this.time.delayedCall(i * 120, () => {
         this.creerFlamme(xAleatoire);
@@ -326,7 +324,7 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   declencherBourrasque() {
-    if (this.gameOver) {
+    if (this.gameOver || this.niveauTermine) {
       return;
     }
 
@@ -341,7 +339,7 @@ export default class niveau1 extends Phaser.Scene {
       this.ventActif = false;
 
       this.time.delayedCall(800, () => {
-        if (!this.gameOver) {
+        if (!this.gameOver && !this.niveauTermine) {
           this.texteVent.setVisible(false);
         }
       }, null, this);
@@ -454,13 +452,98 @@ export default class niveau1 extends Phaser.Scene {
     });
   }
 
-  update() {
-    if (this.gameOver) {
+  gagnerNiveau() {
+    if (this.gameOver || this.niveauTermine) {
       return;
     }
 
-    const toucheSaut = Phaser.Input.Keyboard.JustDown(this.clavier.up) ||
-                      Phaser.Input.Keyboard.JustDown(this.clavier.space);
+    this.niveauTermine = true;
+
+    if (this.timerChrono) {
+      this.timerChrono.paused = true;
+    }
+
+    if (this.timerVent) {
+      this.timerVent.paused = true;
+    }
+
+    if (this.timerFlammes) {
+      this.timerFlammes.paused = true;
+    }
+
+    if (this.timerFinVent) {
+      this.timerFinVent.remove(false);
+    }
+
+    this.ventActif = false;
+    this.forceVent = 0;
+    this.texteVent.setVisible(false);
+
+    if (this.groupeFlammes) {
+      this.groupeFlammes.clear(true, true);
+    }
+
+    this.cameras.main.stopFollow();
+    this.physics.pause();
+    this.player.setTint(0x00ff00);
+
+    const minutes = Math.floor(this.tempsEcoule / 60);
+    const secondes = this.tempsEcoule % 60;
+    const mm = String(minutes).padStart(2, "0");
+    const ss = String(secondes).padStart(2, "0");
+
+    const fondVictoire = this.add.rectangle(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2,
+      760,
+      160,
+      0x000000,
+      0.85
+    );
+    fondVictoire.setScrollFactor(0);
+    fondVictoire.setDepth(9998);
+
+    const texteVictoire1 = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 - 25,
+      "NIVEAU GAGNÉ",
+      {
+        fontSize: "40px",
+        color: "#00ff00",
+        align: "center"
+      }
+    );
+    texteVictoire1.setOrigin(0.5);
+    texteVictoire1.setScrollFactor(0);
+    texteVictoire1.setDepth(9999);
+
+    const texteVictoire2 = this.add.text(
+      this.cameras.main.width / 2,
+      this.cameras.main.height / 2 + 25,
+      "Terminé en " + mm + ":" + ss,
+      {
+        fontSize: "26px",
+        color: "#ffffff",
+        align: "center"
+      }
+    );
+    texteVictoire2.setOrigin(0.5);
+    texteVictoire2.setScrollFactor(0);
+    texteVictoire2.setDepth(9999);
+
+    this.time.delayedCall(2500, () => {
+      this.scene.start("menu");
+    }, null, this);
+  }
+
+  update() {
+    if (this.gameOver || this.niveauTermine) {
+      return;
+    }
+
+    const toucheSaut =
+      Phaser.Input.Keyboard.JustDown(this.clavier.up) ||
+      Phaser.Input.Keyboard.JustDown(this.clavier.space);
 
     if (this.player.body.blocked.down) {
       this.sautsRestants = this.nbSautsMax;
@@ -640,12 +723,12 @@ export default class niveau1 extends Phaser.Scene {
     }
 
     if (procheCoffre && levierActive && Phaser.Input.Keyboard.JustDown(keyE) && !coffreOuvert) {
-      ouvrirCoffreEtDonnerEtoile.call(this);
+      ouvrirCoffreEtFinirNiveau.call(this);
     }
   }
 
   mourir(typeMort) {
-    if (this.gameOver) return;
+    if (this.gameOver || this.niveauTermine) return;
 
     this.gameOver = true;
     this.estEnTrainDeGrimper = false;
@@ -752,15 +835,12 @@ function activerLevier() {
   }
 }
 
-function ouvrirCoffreEtDonnerEtoile() {
+function ouvrirCoffreEtFinirNiveau() {
   coffreOuvert = true;
 
   const star = this.add.image(this.player.x, this.player.y - 20, "star");
   star.setScale(0.8);
   star.setDepth(1001);
-
-  nbEtoiles += 1;
-  texteEtoiles.setText("Nombre d'étoiles récupérées : " + nbEtoiles);
 
   this.tweens.add({
     targets: star,
@@ -769,6 +849,7 @@ function ouvrirCoffreEtDonnerEtoile() {
     duration: 800,
     onComplete: () => {
       star.destroy();
+      this.gagnerNiveau();
     }
   });
 }
