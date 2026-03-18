@@ -22,6 +22,7 @@ export default class niveau1 extends Phaser.Scene {
     this.timerChrono = null;
     this.timerVent = null;
     this.timerFinVent = null;
+    this.timerFlammes = null;
 
     this.tempsEcoule = 0;
     this.texteChrono = null;
@@ -34,6 +35,8 @@ export default class niveau1 extends Phaser.Scene {
 
     this.nbSautsMax = 2;
     this.sautsRestants = 2;
+
+    this.groupeFlammes = null;
   }
 
   preload() {
@@ -60,6 +63,7 @@ export default class niveau1 extends Phaser.Scene {
     this.load.image("ts_tilesheet_snow", "src/assets/tilesheet_snow.png");
 
     this.load.image("star", "src/assets/star.png");
+    this.load.image("flamme", "src/assets/flamme.png");
   }
 
   create() {
@@ -145,6 +149,26 @@ export default class niveau1 extends Phaser.Scene {
 
     if (this.calque_mur_coffre) {
       this.physics.add.collider(this.player, this.calque_mur_coffre);
+    }
+
+    this.groupeFlammes = this.physics.add.group();
+
+    this.physics.add.overlap(this.player, this.groupeFlammes, () => {
+      this.mourir("flamme");
+    });
+
+    this.physics.add.collider(this.groupeFlammes, this.calque_plateforme, (flamme) => {
+      if (flamme) {
+        flamme.destroy();
+      }
+    });
+
+    if (this.calque_mur_coffre) {
+      this.physics.add.collider(this.groupeFlammes, this.calque_mur_coffre, (flamme) => {
+        if (flamme) {
+          flamme.destroy();
+        }
+      });
     }
 
     this.physics.world.setBounds(0, 0, 3800, 500);
@@ -245,6 +269,14 @@ export default class niveau1 extends Phaser.Scene {
       callbackScope: this,
       repeat: -1
     });
+
+    this.timerFlammes = this.time.addEvent({
+      delay: 15000,
+      callback: this.creerVagueFlammes,
+      args: [],
+      callbackScope: this,
+      repeat: -1
+    });
   }
 
   mettreAJourChrono() {
@@ -261,6 +293,36 @@ export default class niveau1 extends Phaser.Scene {
     const ss = String(secondes).padStart(2, "0");
 
     this.texteChrono.setText("Temps : " + mm + ":" + ss);
+  }
+
+  creerFlamme(xPosition) {
+    if (this.gameOver) {
+      return;
+    }
+
+    const flamme = this.groupeFlammes.create(xPosition, -30, "flamme");
+
+    flamme.setScale(0.8);
+    flamme.setDepth(900);
+    flamme.body.setAllowGravity(false);
+    flamme.setVelocityY(260);
+    flamme.setVelocityX(Phaser.Math.Between(-20, 20));
+  }
+
+  creerVagueFlammes() {
+    if (this.gameOver) {
+      return;
+    }
+
+    const nombreFlammes = Phaser.Math.Between(4, 7);
+
+    for (let i = 0; i < nombreFlammes; i++) {
+      const xAleatoire = Phaser.Math.Between(50, 3750);
+
+      this.time.delayedCall(i * 120, () => {
+        this.creerFlamme(xAleatoire);
+      }, null, this);
+    }
   }
 
   declencherBourrasque() {
@@ -378,6 +440,18 @@ export default class niveau1 extends Phaser.Scene {
         break;
       }
     }
+  }
+
+  nettoyerFlammes() {
+    if (!this.groupeFlammes) {
+      return;
+    }
+
+    this.groupeFlammes.children.each((flamme) => {
+      if (flamme && flamme.y > 700) {
+        flamme.destroy();
+      }
+    });
   }
 
   update() {
@@ -542,6 +616,7 @@ export default class niveau1 extends Phaser.Scene {
     this.player.setVelocityX(vitesseFinaleX);
 
     this.gererPlateformesFragiles();
+    this.nettoyerFlammes();
 
     if (this.player.y > 600) {
       this.mourir("chute");
@@ -585,12 +660,20 @@ export default class niveau1 extends Phaser.Scene {
       this.timerVent.paused = true;
     }
 
+    if (this.timerFlammes) {
+      this.timerFlammes.paused = true;
+    }
+
     if (this.timerFinVent) {
       this.timerFinVent.remove(false);
     }
 
     if (this.texteVent) {
       this.texteVent.setVisible(false);
+    }
+
+    if (this.groupeFlammes) {
+      this.groupeFlammes.clear(true, true);
     }
 
     this.cameras.main.stopFollow();
@@ -602,6 +685,10 @@ export default class niveau1 extends Phaser.Scene {
 
     if (typeMort === "branche") {
       ligne2 = "Ne touche pas les branches !";
+    }
+
+    if (typeMort === "flamme") {
+      ligne2 = "Évite les flammes qui tombent du ciel !";
     }
 
     this.fondGameOver = this.add.rectangle(
