@@ -35,6 +35,9 @@ export default class niveau1 extends Phaser.Scene {
     this.sautsRestants = 2;
 
     this.groupeFlammes = null;
+    this.groupeFlammesSol = null;
+    this.solsEnflammes = {};
+
     this.niveauTermine = false;
   }
 
@@ -89,6 +92,7 @@ export default class niveau1 extends Phaser.Scene {
     this.tempsEcoule = 0;
     this.tuilesFragilesDeclenchees = [];
     this.sautsRestants = this.nbSautsMax;
+    this.solsEnflammes = {};
 
     this.cameras.main.setZoom(1);
 
@@ -151,13 +155,15 @@ export default class niveau1 extends Phaser.Scene {
     }
 
     this.groupeFlammes = this.physics.add.group();
+    this.groupeFlammesSol = this.add.group();
 
     this.physics.add.overlap(this.player, this.groupeFlammes, () => {
       this.mourir("flamme");
     });
 
-    this.physics.add.collider(this.groupeFlammes, this.calque_plateforme, (flamme) => {
-      if (flamme) {
+    this.physics.add.collider(this.groupeFlammes, this.calque_plateforme, (flamme, tile) => {
+      if (flamme && tile) {
+        this.creerFlammeSol(tile);
         flamme.destroy();
       }
     });
@@ -295,8 +301,65 @@ export default class niveau1 extends Phaser.Scene {
     flamme.setScale(0.8);
     flamme.setDepth(900);
     flamme.body.setAllowGravity(false);
+    flamme.setImmovable(true);
     flamme.setVelocityY(260);
     flamme.setVelocityX(Phaser.Math.Between(-20, 20));
+  }
+
+  creerFlammeSol(tile) {
+    if (!tile || this.gameOver || this.niveauTermine) {
+      return;
+    }
+
+    const idTuile = tile.x + "_" + tile.y;
+
+    if (this.solsEnflammes[idTuile]) {
+      return;
+    }
+
+    const x = tile.getCenterX();
+    const y = tile.pixelY + tile.height / 2;
+
+    const flammeSol = this.add.image(x, y, "flamme");
+    flammeSol.setScale(0.9, 0.5);
+    flammeSol.setDepth(950);
+
+    this.solsEnflammes[idTuile] = {
+      sprite: flammeSol,
+      x: tile.x,
+      y: tile.y
+    };
+
+    this.groupeFlammesSol.add(flammeSol);
+
+    this.tweens.add({
+      targets: flammeSol,
+      alpha: 0.6,
+      duration: 250,
+      yoyo: true,
+      repeat: -1
+    });
+  }
+
+  verifierSolEnflammeSousJoueur() {
+    const points = [
+      { x: this.player.x, y: this.player.y + 18 },
+      { x: this.player.x - 6, y: this.player.y + 18 },
+      { x: this.player.x + 6, y: this.player.y + 18 }
+    ];
+
+    for (let i = 0; i < points.length; i++) {
+      const tuile = this.calque_plateforme.getTileAtWorldXY(points[i].x, points[i].y, false);
+
+      if (tuile) {
+        const idTuile = tuile.x + "_" + tuile.y;
+
+        if (this.solsEnflammes[idTuile]) {
+          this.mourir("flammeSol");
+          return;
+        }
+      }
+    }
   }
 
   creerVagueFlammes() {
@@ -483,7 +546,10 @@ export default class niveau1 extends Phaser.Scene {
       this.groupeFlammes.clear(true, true);
     }
 
-    this.cameras.main.stopFollow();
+    if (this.groupeFlammesSol) {
+      this.groupeFlammesSol.clear(true, true);
+    }
+
     this.physics.pause();
     this.player.setTint(0x00ff00);
 
@@ -700,6 +766,7 @@ export default class niveau1 extends Phaser.Scene {
 
     this.gererPlateformesFragiles();
     this.nettoyerFlammes();
+    this.verifierSolEnflammeSousJoueur();
 
     if (this.player.y > 600) {
       this.mourir("chute");
@@ -759,6 +826,10 @@ export default class niveau1 extends Phaser.Scene {
       this.groupeFlammes.clear(true, true);
     }
 
+    if (this.groupeFlammesSol) {
+      this.groupeFlammesSol.clear(true, true);
+    }
+
     this.cameras.main.stopFollow();
     this.physics.pause();
     this.player.setTint(0xff0000);
@@ -772,6 +843,10 @@ export default class niveau1 extends Phaser.Scene {
 
     if (typeMort === "flamme") {
       ligne2 = "Évite les flammes qui tombent du ciel !";
+    }
+
+    if (typeMort === "flammeSol") {
+      ligne2 = "Ne marche pas sur le sol enflammé !";
     }
 
     this.fondGameOver = this.add.rectangle(
