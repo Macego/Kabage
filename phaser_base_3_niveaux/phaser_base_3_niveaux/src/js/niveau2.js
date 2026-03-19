@@ -36,7 +36,7 @@ export default class niveau2 extends Phaser.Scene {
     this.layerDecor3 = null;
     this.layerPlateforme = null;
 
-    this.porte_retour = null;
+    this.etoile = null;
 
     this.nbSautsMax = 2;
     this.sautsRestants = 2;
@@ -44,6 +44,8 @@ export default class niveau2 extends Phaser.Scene {
 
     this.estMort = false;
     this.toucheRespawnRelachee = true;
+
+    this.victoire = false;
 
     this.tuilesFragilesData = [];
     this.tuilesFragilesDeclenchees = new Set();
@@ -67,9 +69,8 @@ export default class niveau2 extends Phaser.Scene {
     this.load.image("niveau2_forteress_redim_img", "src/assets/forteress redim.png");
     this.load.image("niveau2_pic2_img", "src/assets/pic2.0.png");
     this.load.image("niveau2_boutonhaut_img", "src/assets/boutonhaut.png");
-
-    // Mets ici le vrai nom de ton fichier de fond du niveau 2
     this.load.image("niveau2_background_img", "src/assets/background2.0.png");
+    this.load.image("niveau2_star", "src/assets/star.png");
 
     this.load.spritesheet("niveau2_forteress_sheet", "src/assets/forteress redim.png", {
       frameWidth: 32,
@@ -80,12 +81,11 @@ export default class niveau2 extends Phaser.Scene {
       frameWidth: 32,
       frameHeight: 48
     });
-
-    this.load.image("niveau2_img_porte1", "src/assets/door1.png");
   }
 
   create() {
     this.estMort = false;
+    this.victoire = false;
     this.tuilesFragilesData = [];
     this.tuilesFragilesDeclenchees = new Set();
     this.boutons = [];
@@ -183,13 +183,21 @@ export default class niveau2 extends Phaser.Scene {
     if (this.layerDecor3) this.physics.add.collider(this.player, this.layerDecor3);
     if (this.layerPlateforme) this.physics.add.collider(this.player, this.layerPlateforme);
 
-    this.porte_retour = this.physics.add.staticSprite(208, 176, "niveau2_img_porte1");
-    this.porte_retour.setDepth(10);
+    this.etoile = this.physics.add.staticSprite(208, 176, "niveau2_star");
+    this.etoile.setDepth(10);
+
+    this.tweens.add({
+      targets: this.etoile,
+      angle: 360,
+      duration: 2500,
+      repeat: -1
+    });
 
     this.chargerBoutons();
     this.chargerMobiles();
 
     this.creerEcranMort();
+    this.creerTexteVictoire();
 
     this.physics.world.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
     this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -383,7 +391,7 @@ export default class niveau2 extends Phaser.Scene {
   }
 
   mourir() {
-    if (this.estMort) return;
+    if (this.estMort || this.victoire) return;
 
     this.estMort = true;
     this.player.setVelocity(0, 0);
@@ -482,6 +490,20 @@ export default class niveau2 extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(100).setScrollFactor(0).setAlpha(0);
   }
 
+  creerTexteVictoire() {
+    this.texteVictoire = this.add.text(400, 100, "BRAVO VOUS AVEZ GAGNÉ", {
+      fontSize: "32px",
+      fill: "#ffff00",
+      fontStyle: "bold",
+      stroke: "#000000",
+      strokeThickness: 4
+    })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(200)
+      .setAlpha(0);
+  }
+
   creerAnimations() {
     if (!this.anims.exists("niveau2_anim_tourne_gauche")) {
       this.anims.create({
@@ -512,6 +534,8 @@ export default class niveau2 extends Phaser.Scene {
 
   update() {
     if (!this.player || !this.clavier) return;
+
+    if (this.victoire) return;
 
     if (this.estMort) {
       if (this.clavier.space.isDown && this.toucheRespawnRelachee) {
@@ -581,10 +605,16 @@ export default class niveau2 extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.clavier.space)) {
-      if (this.physics.overlap(this.player, this.porte_retour)) {
+    if (this.physics.overlap(this.player, this.etoile)) {
+      this.victoire = true;
+      this.player.setVelocity(0, 0);
+      this.player.body.setEnable(false);
+      this.etoile.setVisible(false);
+      this.texteVictoire.setAlpha(1);
+
+      this.time.delayedCall(2000, () => {
         this.scene.start("menu");
-      }
+      });
     }
   }
 }
