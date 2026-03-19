@@ -26,6 +26,8 @@ export default class niveau2 extends Phaser.Scene {
 
     this.player = null;
     this.clavier = null;
+    this.toucheEntree = null;
+
     this.spawnX = 640;
     this.spawnY = 480;
 
@@ -176,6 +178,8 @@ export default class niveau2 extends Phaser.Scene {
     this.player.body.setMaxVelocityY(this.vitesseChutMax);
 
     this.clavier = this.input.keyboard.createCursorKeys();
+    this.toucheEntree = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+
     this.creerAnimations();
 
     if (this.layerDecor) this.physics.add.collider(this.player, this.layerDecor);
@@ -483,7 +487,7 @@ export default class niveau2 extends Phaser.Scene {
       strokeThickness: 4
     }).setOrigin(0.5).setDepth(100).setScrollFactor(0).setAlpha(0);
 
-    this.mortSous = this.add.text(W / 2, H / 2 + 56, "[ ESPACE ] pour réapparaître", {
+    this.mortSous = this.add.text(W / 2, H / 2 + 56, "[ ENTRÉE ] pour réapparaître", {
       fontSize: "16px",
       fontFamily: "Arial, sans-serif",
       fill: "#aaaaaa"
@@ -533,17 +537,17 @@ export default class niveau2 extends Phaser.Scene {
   }
 
   update() {
-    if (!this.player || !this.clavier) return;
+    if (!this.player || !this.clavier || !this.toucheEntree) return;
 
     if (this.victoire) return;
 
     if (this.estMort) {
-      if (this.clavier.space.isDown && this.toucheRespawnRelachee) {
+      if (this.toucheEntree.isDown && this.toucheRespawnRelachee) {
         this.toucheRespawnRelachee = false;
         this.respawn();
       }
 
-      if (this.clavier.space.isUp) {
+      if (this.toucheEntree.isUp) {
         this.toucheRespawnRelachee = true;
       }
 
