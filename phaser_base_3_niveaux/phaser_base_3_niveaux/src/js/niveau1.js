@@ -21,10 +21,14 @@ export default class niveau1 extends Phaser.Scene {
     this.timerVent = null;
     this.timerFinVent = null;
     this.timerFlammes = null;
+    this.timerChampignon = null;
+    this.timerImmuniteFlammes = null;
 
     this.tempsEcoule = 0;
     this.texteChrono = null;
     this.texteVent = null;
+    this.texteImmunite = null;
+    this.texteMessageChampignon = null;
 
     this.ventActif = false;
     this.forceVent = 0;
@@ -36,7 +40,12 @@ export default class niveau1 extends Phaser.Scene {
 
     this.groupeFlammes = null;
     this.groupeFlammesSol = null;
+    this.groupeChampignonsQuiTombent = null;
+    this.groupeChampignonsSol = null;
     this.solsEnflammes = {};
+
+    this.immuniseFlammes = false;
+    this.tempsImmuniteRestant = 0;
 
     this.niveauTermine = false;
   }
@@ -66,6 +75,7 @@ export default class niveau1 extends Phaser.Scene {
 
     this.load.image("star", "src/assets/star.png");
     this.load.image("flamme", "src/assets/flamme.png");
+    this.load.image("champignon", "src/assets/champignon.png");
   }
 
   create() {
@@ -93,6 +103,9 @@ export default class niveau1 extends Phaser.Scene {
     this.tuilesFragilesDeclenchees = [];
     this.sautsRestants = this.nbSautsMax;
     this.solsEnflammes = {};
+
+    this.immuniseFlammes = false;
+    this.tempsImmuniteRestant = 0;
 
     this.cameras.main.setZoom(1);
 
@@ -156,9 +169,24 @@ export default class niveau1 extends Phaser.Scene {
 
     this.groupeFlammes = this.physics.add.group();
     this.groupeFlammesSol = this.add.group();
+    this.groupeChampignonsQuiTombent = this.physics.add.group();
+    this.groupeChampignonsSol = this.physics.add.group({
+      allowGravity: false,
+      immovable: true
+    });
 
     this.physics.add.overlap(this.player, this.groupeFlammes, () => {
-      this.mourir("flamme");
+      if (!this.immuniseFlammes) {
+        this.mourir("flamme");
+      }
+    });
+
+    this.physics.add.overlap(this.player, this.groupeChampignonsQuiTombent, (player, champignon) => {
+      this.ramasserChampignon(champignon);
+    });
+
+    this.physics.add.overlap(this.player, this.groupeChampignonsSol, (player, champignon) => {
+      this.ramasserChampignon(champignon);
     });
 
     this.physics.add.collider(this.groupeFlammes, this.calque_plateforme, (flamme, tile) => {
@@ -168,10 +196,23 @@ export default class niveau1 extends Phaser.Scene {
       }
     });
 
+    this.physics.add.collider(this.groupeChampignonsQuiTombent, this.calque_plateforme, (champignon, tile) => {
+      if (champignon && tile) {
+        this.creerChampignonSol(champignon.x, tile.pixelY);
+        champignon.destroy();
+      }
+    });
+
     if (this.calque_mur_coffre) {
       this.physics.add.collider(this.groupeFlammes, this.calque_mur_coffre, (flamme) => {
         if (flamme) {
           flamme.destroy();
+        }
+      });
+
+      this.physics.add.collider(this.groupeChampignonsQuiTombent, this.calque_mur_coffre, (champignon) => {
+        if (champignon) {
+          champignon.destroy();
         }
       });
     }
@@ -250,6 +291,30 @@ export default class niveau1 extends Phaser.Scene {
     this.texteVent.setDepth(1001);
     this.texteVent.setVisible(false);
 
+    this.texteImmunite = this.add.text(788, 12, "", {
+      fontSize: "16px",
+      color: "#ffffff",
+      backgroundColor: "#006400",
+      padding: { x: 6, y: 4 }
+    });
+    this.texteImmunite.setOrigin(1, 0);
+    this.texteImmunite.setScrollFactor(0);
+    this.texteImmunite.setDepth(1000);
+    this.texteImmunite.setVisible(false);
+
+    this.texteMessageChampignon = this.add.text(400, 80, "", {
+      fontSize: "18px",
+      color: "#ffffff",
+      backgroundColor: "#5a2d82",
+      padding: { x: 10, y: 6 },
+      align: "center",
+      wordWrap: { width: 650 }
+    });
+    this.texteMessageChampignon.setOrigin(0.5, 0);
+    this.texteMessageChampignon.setScrollFactor(0);
+    this.texteMessageChampignon.setDepth(1002);
+    this.texteMessageChampignon.setVisible(false);
+
     this.timerChrono = this.time.addEvent({
       delay: 1000,
       callback: this.mettreAJourChrono,
@@ -273,6 +338,14 @@ export default class niveau1 extends Phaser.Scene {
       callbackScope: this,
       repeat: -1
     });
+
+    this.timerChampignon = this.time.addEvent({
+      delay: Phaser.Math.Between(18000, 28000),
+      callback: this.creerChampignonAleatoire,
+      args: [],
+      callbackScope: this,
+      repeat: -1
+    });
   }
 
   mettreAJourChrono() {
@@ -289,6 +362,94 @@ export default class niveau1 extends Phaser.Scene {
     const ss = String(secondes).padStart(2, "0");
 
     this.texteChrono.setText("Temps : " + mm + ":" + ss);
+
+    if (this.immuniseFlammes) {
+      this.tempsImmuniteRestant -= 1;
+
+      if (this.tempsImmuniteRestant < 0) {
+        this.tempsImmuniteRestant = 0;
+      }
+
+      this.texteImmunite.setText("Immunité flammes : " + this.tempsImmuniteRestant + "s");
+      this.texteImmunite.setVisible(true);
+
+      if (this.tempsImmuniteRestant <= 0) {
+        this.desactiverImmuniteFlammes();
+      }
+    }
+  }
+
+  creerChampignonAleatoire() {
+    if (this.gameOver || this.niveauTermine) {
+      return;
+    }
+
+    let xAleatoire = Phaser.Math.Between(this.player.x - 250, this.player.x + 250);
+
+    if (xAleatoire < 30) {
+      xAleatoire = 30;
+    }
+
+    if (xAleatoire > 3770) {
+      xAleatoire = 3770;
+    }
+
+    const champignon = this.groupeChampignonsQuiTombent.create(xAleatoire, -30, "champignon");
+    champignon.setScale(0.8);
+    champignon.setDepth(900);
+    champignon.body.setAllowGravity(false);
+    champignon.setImmovable(true);
+    champignon.setVelocityY(220);
+    champignon.setVelocityX(Phaser.Math.Between(-15, 15));
+  }
+
+  creerChampignonSol(xPosition, tilePixelY) {
+    const champignon = this.groupeChampignonsSol.create(xPosition, tilePixelY, "champignon");
+    champignon.setOrigin(0.5, 1);
+    champignon.setScale(0.8);
+    champignon.setDepth(920);
+    champignon.body.setAllowGravity(false);
+    champignon.body.setImmovable(true);
+    return champignon;
+  }
+
+  ramasserChampignon(champignon) {
+    if (!champignon || !champignon.active || this.gameOver || this.niveauTermine) {
+      return;
+    }
+
+    champignon.disableBody(true, true);
+
+    this.immuniseFlammes = true;
+    this.tempsImmuniteRestant = 30;
+
+    if (this.timerImmuniteFlammes) {
+      this.timerImmuniteFlammes.remove(false);
+    }
+
+    this.timerImmuniteFlammes = this.time.delayedCall(30000, () => {
+      this.desactiverImmuniteFlammes();
+    }, null, this);
+
+    this.texteImmunite.setText("Immunité flammes : 30s");
+    this.texteImmunite.setVisible(true);
+
+    this.texteMessageChampignon.setText(
+      "Champignon récupéré : tu es immunisé contre les flammes et le sol enflammé pendant 30 secondes."
+    );
+    this.texteMessageChampignon.setVisible(true);
+
+    this.time.delayedCall(3500, () => {
+      if (!this.gameOver && !this.niveauTermine) {
+        this.texteMessageChampignon.setVisible(false);
+      }
+    }, null, this);
+  }
+
+  desactiverImmuniteFlammes() {
+    this.immuniseFlammes = false;
+    this.tempsImmuniteRestant = 0;
+    this.texteImmunite.setVisible(false);
   }
 
   creerFlamme(xPosition) {
@@ -342,6 +503,10 @@ export default class niveau1 extends Phaser.Scene {
   }
 
   verifierSolEnflammeSousJoueur() {
+    if (this.immuniseFlammes) {
+      return;
+    }
+
     const points = [
       { x: this.player.x, y: this.player.y + 18 },
       { x: this.player.x - 6, y: this.player.y + 18 },
@@ -515,6 +680,18 @@ export default class niveau1 extends Phaser.Scene {
     });
   }
 
+  nettoyerChampignonsTombants() {
+    if (!this.groupeChampignonsQuiTombent) {
+      return;
+    }
+
+    this.groupeChampignonsQuiTombent.children.each((champignon) => {
+      if (champignon && champignon.y > 700) {
+        champignon.destroy();
+      }
+    });
+  }
+
   gagnerNiveau() {
     if (this.gameOver || this.niveauTermine) {
       return;
@@ -534,6 +711,14 @@ export default class niveau1 extends Phaser.Scene {
       this.timerFlammes.paused = true;
     }
 
+    if (this.timerChampignon) {
+      this.timerChampignon.paused = true;
+    }
+
+    if (this.timerImmuniteFlammes) {
+      this.timerImmuniteFlammes.remove(false);
+    }
+
     if (this.timerFinVent) {
       this.timerFinVent.remove(false);
     }
@@ -541,6 +726,8 @@ export default class niveau1 extends Phaser.Scene {
     this.ventActif = false;
     this.forceVent = 0;
     this.texteVent.setVisible(false);
+    this.texteImmunite.setVisible(false);
+    this.texteMessageChampignon.setVisible(false);
 
     if (this.groupeFlammes) {
       this.groupeFlammes.clear(true, true);
@@ -548,6 +735,14 @@ export default class niveau1 extends Phaser.Scene {
 
     if (this.groupeFlammesSol) {
       this.groupeFlammesSol.clear(true, true);
+    }
+
+    if (this.groupeChampignonsQuiTombent) {
+      this.groupeChampignonsQuiTombent.clear(true, true);
+    }
+
+    if (this.groupeChampignonsSol) {
+      this.groupeChampignonsSol.clear(true, true);
     }
 
     this.physics.pause();
@@ -766,6 +961,7 @@ export default class niveau1 extends Phaser.Scene {
 
     this.gererPlateformesFragiles();
     this.nettoyerFlammes();
+    this.nettoyerChampignonsTombants();
     this.verifierSolEnflammeSousJoueur();
 
     if (this.player.y > 600) {
@@ -814,6 +1010,14 @@ export default class niveau1 extends Phaser.Scene {
       this.timerFlammes.paused = true;
     }
 
+    if (this.timerChampignon) {
+      this.timerChampignon.paused = true;
+    }
+
+    if (this.timerImmuniteFlammes) {
+      this.timerImmuniteFlammes.remove(false);
+    }
+
     if (this.timerFinVent) {
       this.timerFinVent.remove(false);
     }
@@ -822,12 +1026,28 @@ export default class niveau1 extends Phaser.Scene {
       this.texteVent.setVisible(false);
     }
 
+    if (this.texteImmunite) {
+      this.texteImmunite.setVisible(false);
+    }
+
+    if (this.texteMessageChampignon) {
+      this.texteMessageChampignon.setVisible(false);
+    }
+
     if (this.groupeFlammes) {
       this.groupeFlammes.clear(true, true);
     }
 
     if (this.groupeFlammesSol) {
       this.groupeFlammesSol.clear(true, true);
+    }
+
+    if (this.groupeChampignonsQuiTombent) {
+      this.groupeChampignonsQuiTombent.clear(true, true);
+    }
+
+    if (this.groupeChampignonsSol) {
+      this.groupeChampignonsSol.clear(true, true);
     }
 
     this.cameras.main.stopFollow();
